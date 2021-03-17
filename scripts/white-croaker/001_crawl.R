@@ -1,0 +1,206 @@
+# This code fits a continuous-time correlated random walk model to my animal movement data. Basically
+# it gives me an idea of where a fish is between location fixes that's not exactly a straight line. 
+# After spending too much time doing research, it appears that this method is the simplest for the data
+# at hand, as it uses a linear Kalman filter to produce the most likely path taken by an individual. Because
+# the data are pretty close together, this seems pretty appropriate...
+
+library(crawl)
+library(reshape)
+library(rgdal)
+library(fields)
+
+options(digits=20) # so that we don't lose any resolution
+
+dat<-read.csv("data/all-detections/white_croaker_detections.csv")
+
+colnames(dat)[1]<- "DETECTEDID"
+
+# Establish places to save data
+fivemin<-NULL
+twomin<-NULL
+model_est <- NULL
+
+# Go through each fish
+for( i in unique(dat$DETECTEDID)) { 
+  df<-dat[which(dat$DETECTEDID == i),]
+  df$DATETIME<-as.POSIXct(df$DATETIME, tz="UTC")
+  id<-df$DETECTEDID[1]
+  if ( nrow(df) > 3) { # if there are more than one positions for the tag...
+    df<-df[order(df$DATETIME),] # order the data by local time
+    
+    # Now some spatial house keeping...
+    coordinates(df)<-~LON+LAT # make sure these are read as coordinates
+    proj4string(df)<-CRS("+proj=longlat")
+    df<-spTransform(df, CRS("+proj=aeqd +lat_0=33.7141883333 +lon_0=-118.339436667 +x_0=5000 +y_0=5000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"))
+    # define the projection for analyses
+    
+    # Set the initial parameters for this model. a = starting x location, starting x velocity, starting y
+    # location, starting y velocity. P = variance-covariance matrix. Various papers suggest an identity matrix
+    # is adequate for this (which assumes no covariance and equal variances). You can also do large variances
+    # if you're unsure what the variance is, but this will produce a straight line path.
+    initial = list(a=c(coordinates(df)[1,1],0,
+                       coordinates(df)[1,2],0),
+                   P=diag(c(1,1,1,1)))
+    
+    # Let's do this
+    
+    df$locClass <- cut(df$HPE, 4) #binning hpe
+    
+    # Save model runs
+    errmod_pred <-list() # 2 minute interpolations (default)
+    errmod_pred5 <-list() # 5 minute interpolations
+    errmod_test <- list() # the run information
+    
+    # Run through 6 models per individual, saving outputs to plots
+    png(paste0("figures/white-croaker/crawl_",id,".png")) # create empty plot
+    plot(df$X, df$Y) # plot x/y coordinates
+    
+    for(val in 1:6){ # for each of 6 runs...
+      run<-crwMLE(mov.model=~1, coord=c("X","Y"), drift=F, initial.state = initial, err.model = list(x=~1),
+                  prior = function(p) dnorm(p[1], log(1.8), 0.25 , log = TRUE) + dnorm(p[3], 3.44, 0.6, log = TRUE),
+                  data=df, Time.name = "DATETIME")
+      # run the model with priors (estimated by looking at the output of runs without priors)
+      
+      # Save the outputs
+      errmod_test[[val]] <- run
+      
+      # Save the model runs for 2 and 5 minute intervals
+      errmod_pred[[val]] <- crwPredict(object.crwFit = run, "2 mins", speedEst=F, flat=T) # This predicts where the animal
+      errmod_pred5[[val]] <-crwPredict(object.crwFit = run, "5 mins", speedEst=F, flat=T) # This predicts where the animal
+      
+      # Save the model estimate values for tau, sigma, beta
+      model_est <- rbind(model_est, data.frame("id" = id, "run" = val,
+                                               "tau" = run$estPar[1], 
+                                               "sigma" = run$estPar[2], 
+                                               "beta" = run$estPar[3]))
+      
+      # Add lines to the plot for 2 and 5 minute intervals
+      lines(errmod_pred[[val]]$mu.x, errmod_pred[[val]]$mu.y, col=tim.colors(7)[val])
+      lines(errmod_pred5[[val]]$mu.x, errmod_pred5[[val]]$mu.y, col=tim.colors(7)[val], lty=3)
+    }  # end for each run
+    
+    # Add black lines to indicate which model is saved for the individual
+    # Model 3 chosen is arbitrary
+    lines(errmod_pred[[3]]$mu.x, errmod_pred[[3]]$mu.y) 
+    lines(errmod_pred5[[3]]$mu.x, errmod_pred5[[3]]$mu.y, lty=3)
+    
+    # End plot
+    dev.off()
+    
+    # Save the crawl locations from model # 3
+    fivemin<-rbind(fivemin, errmod_pred5[[3]])
+    twomin<-rbind(twomin, errmod_pred[[3]])
+    
+  } # end for if there are more than one detections for the fish
+} # end for each file in that directory
+
+# Save all csvs 
+write.csv(model_est, "data/crawl/WC_model_estimates.csv", row.names=FALSE)
+write.csv(twomin, "data/crawl/WC_2min-interpolations.csv", row.names = F)
+write.csv(fivemin, "data/crawl/WC_5min-interpolations.csv", row.names = F)
+
+# Some models did not perform well for run #3, so we need to redo them here. 
+# We can tell they did not perform well because all model lines were not 
+# plotted on top of each other, and the tau/sigma/beta values that were generated
+# for model 3 were not similar to the values generated by models 1,2,4,5,6. 
+
+library(tidyverse)
+
+# Read in files
+model_est <- read.csv("data/crawl/WC_model_estimates.csv")
+twomin <- read.csv("data/crawl/WC_2min-interpolations.csv")
+fivemin <- read.csv("data/crawl/WC_5min-interpolations.csv")
+
+# Fish to be redone
+redo_list <- c("G-09", "G-15", "G-27", "G-57", "G-65", "G-72", "G-127")
+redo_list <- c("G-09", "G-127", "G-57")
+
+# Remove data from twomin and fivemin that have the bad fish
+twomin <- twomin %>% 
+  filter(!DETECTEDID %in% redo_list) %>% 
+  mutate(DATETIME = as.POSIXct(DATETIME, "UTC"))
+
+fivemin <- fivemin %>% 
+  filter(!DETECTEDID %in% redo_list) %>% 
+  mutate(DATETIME = as.POSIXct(DATETIME, "UTC"))
+
+model_est <- model_est %>% 
+  filter((!id %in% redo_list) & run <= 6)
+
+# Re-run: 
+# Go through each fish
+for( i in redo_list) { 
+  df<-dat[which(dat$DETECTEDID == i),]
+  df$DATETIME<-as.POSIXct(df$DATETIME, tz="UTC")
+  id<-df$DETECTEDID[1]
+  if ( nrow(df) > 3) { # if there are more than one positions for the tag...
+    df<-df[order(df$DATETIME),] # order the data by local time
+    # Now some spatial house keeping...
+    coordinates(df)<-~LON+LAT # make sure these are read as coordinates
+    proj4string(df)<-CRS("+proj=longlat")
+    df<-spTransform(df, CRS("+proj=aeqd +lat_0=33.7141883333 +lon_0=-118.339436667 +x_0=5000 +y_0=5000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"))
+    # define the projection for analyses
+    
+    # Set the initial parameters for this model. a = starting x location, starting x velocity, starting y
+    # location, starting y velocity. P = variance-covariance matrix. Various papers suggest an identity matrix
+    # is adequate for this (which assumes no covariance and equal variances). You can also do large variances
+    # if you're unsure what the variance is, but this will produce a straight line path.
+    initial = list(a=c(coordinates(df)[1,1],0,
+                       coordinates(df)[1,2],0),
+                   P=diag(c(1,1,1,1)))
+    
+    # Let's do this
+    
+    df$locClass <- cut(df$HPE, 4) #binning hpe
+    
+    # Save model runs
+    errmod_pred <-list() # 2 minute interpolations (default)
+    errmod_pred5 <-list() # 5 minute interpolations
+    errmod_test <- list() # the run information
+    
+    # Run through 6 models per individual, saving outputs to plots
+    png(paste0("figures/white-croaker/crawl_",id,".png")) # create empty plot
+    plot(df$X, df$Y) # plot x/y coordinates
+    
+    for(val in 1:6){ # for each of 6 runs...
+      run<-crwMLE(mov.model=~1, coord=c("X","Y"), drift=F, initial.state = initial, err.model = list(x=~1),
+                  prior = function(p) dnorm(p[1], log(1.8), 0.25 , log = TRUE) + dnorm(p[3], 3.44, 0.6, log = TRUE),
+                  data=df, Time.name = "DATETIME")
+      # run the model with priors (estimated by looking at the output of runs without priors)
+      
+      # Save the outputs
+      errmod_test[[val]] <- run
+      
+      # Save the model runs for 2 and 5 minute intervals
+      errmod_pred[[val]] <- crwPredict(object.crwFit = run, "2 mins", speedEst=F, flat=T) # This predicts where the animal
+      errmod_pred5[[val]] <-crwPredict(object.crwFit = run, "5 mins", speedEst=F, flat=T) # This predicts where the animal
+      
+      # Save the model estimate values for tau, sigma, beta
+      model_est <- rbind(model_est, data.frame("id" = id, "run" = val+6,
+                                               "tau" = run$estPar[1], 
+                                               "sigma" = run$estPar[2], 
+                                               "beta" = run$estPar[3]))
+      
+      # Add lines to the plot for 2 and 5 minute intervals
+      lines(errmod_pred[[val]]$mu.x, errmod_pred[[val]]$mu.y, col=tim.colors(7)[val])
+      lines(errmod_pred5[[val]]$mu.x, errmod_pred5[[val]]$mu.y, col=tim.colors(7)[val], lty=3)
+    }  # end for each run
+    
+    # Add black lines to indicate which model is saved for the individual
+    # Model 3 chosen is arbitrary
+    lines(errmod_pred[[3]]$mu.x, errmod_pred[[3]]$mu.y) 
+    lines(errmod_pred5[[3]]$mu.x, errmod_pred5[[3]]$mu.y, lty=3)
+    
+    # End plot
+    dev.off()
+    
+    # Save the crawl locations from model # 3
+    fivemin<-rbind(fivemin, errmod_pred5[[3]])
+    twomin<-rbind(twomin, errmod_pred[[3]])
+    
+  } # end for if there are more than one detections for the fish
+} # end for each file in that directory
+
+write.csv(model_est, "data/crawl/WC_model_estimates.csv", row.names=FALSE)
+write.csv(twomin, "data/crawl/WC_2min-interpolations.csv", row.names = F)
+write.csv(fivemin, "data/crawl/WC_5min-interpolations.csv", row.names = F)

@@ -1,0 +1,58 @@
+---
+title: "002a - Model Fitting"
+output: html_notebook
+---
+
+Using this notebook to make sure that the crawl results work well for all individuals/flagging individuals to remove from CEM analysis.
+
+```{r}
+library(tidyverse)
+```
+# Two Minute Interpolations
+```{r, echo=TRUE}
+dat <- read.csv("../../data/crawl/VR_2min-interpolations.csv")
+```
+
+```{r, echo=TRUE}
+for(fish in unique(dat$DETECTEDID)) { 
+  sub <- dat %>% 
+    filter(DETECTEDID == fish) %>% 
+    mutate(DATETIME = as.POSIXct(DATETIME, tz="UTC")) %>% 
+    arrange(DATETIME)
+  
+  pred <- sub %>% 
+    filter(locType == "p")
+  
+  obs <- sub %>% 
+    filter(locType == "o")
+  
+  plot(pred$mu.x, pred$mu.y, type="l", col="red")
+  points(obs$X, obs$Y, pch=20, col="black")
+}
+
+```
+
+# Five Minute Interpolations
+```{r, echo=TRUE}
+dat <- read.csv("../../data/crawl/VR_5min-interpolations.csv")
+```
+
+```{r, echo=TRUE}
+for(fish in unique(dat$DETECTEDID)) { 
+  sub <- dat %>% 
+    filter(DETECTEDID == fish) %>% 
+    mutate(DATETIME = as.POSIXct(DATETIME, tz="UTC")) %>% 
+    arrange(DATETIME)
+  
+  pred <- sub %>% 
+    filter(locType == "p")
+  
+  obs <- sub %>% 
+    filter(locType == "o")
+  
+  plot(pred$mu.x, pred$mu.y, type="l", col="red")
+  points(obs$X, obs$Y, pch=20, col="black")
+}
+
+```
+

@@ -1,0 +1,168 @@
+---
+title: "Plots and Stats - WC"
+output: html_notebook
+---
+
+Build Plots and Stats for the CEM data
+
+Step 1: Scale to the median
+Step 2: Fit to zscore of best fitting distribution
+Step 3: Compare using ks test
+
+```{r}
+# Libraries
+library(tidyverse)
+library(reshape)
+library(readxl)
+library(limma)
+
+source("../functions/comparing-functions.R")
+```
+
+# Load Contaminant Data
+```{r}
+# Contaminant Data
+collect<-read_xlsx("../../data/true-contaminants/white_croaker_contaminants.xlsx")
+collect<-collect %>% 
+  filter(Spcode == "WC" & region == "PV")
+colnames(collect)[11:12] <- c("DDT","PCB")
+```
+
+# DDT 
+## Sampled Data - Tissue
+
+```{r}
+# Tissue
+filtered <- collect %>%
+  filter(!is.na(DDT)) 
+
+dataset <- filtered$DDT
+
+if(median(dataset) != 0) { 
+
+# Scale to median
+scaled <- dataset/median(dataset)
+
+# Create Plot
+create_plots(data = scaled, type = "in Muscle Tissue", contam = "DDT", 
+             color = "darkslategray", path = "../../figures/white-croaker/", 
+             file = "ddt_muscle")
+
+# scale for ks test
+
+ddt_tissue <- scale_for_ks(spp = "WC", file = "WC-DDT_dist-estimates.csv", 
+                  data = scaled)
+} 
+
+if(median(dataset) == 0) { 
+
+# Create Plot
+create_plots(data = dataset, type = "in Muscle Tissue", contam = "DDT", 
+             color = "darkslategray", path = "../../figures/white-croaker/", 
+             file = "ddt_muscle_median0")
+}
+```
+
+## CEM Generated Files
+```{r}
+# List of relevant files for DDT and WC
+list_files <- list.files('../../data/CEMs/', pattern='ddt')
+list_files <- list_files[grepl('scaled_WC', list_files)]
+
+for( file in list_files ) { 
+  dat <- read.csv(paste0('../../data/CEMS/', file))
+  
+  # First run will be without behavioral data
+  name <- colsplit(file, "_", c("","","","",""))[,3]
+  name <- paste(colsplit(name, "states-", c(""))[,2])
+  name <- paste0(name, "-noscale")
+  
+  dataset <- dat$total_tox
+  
+  if(median(dataset) != 0) { 
+  
+  # Scale to median
+  
+  scaled <- dataset/median(dataset)
+  
+  # Create Plot
+  create_plots(data = scaled, type = "without behavioral data", contam = "DDT", 
+             color = "dodgerblue4", path = "../../figures/white-croaker/", 
+             file = paste0(name, "_ddt_no-behavioral"))
+  
+  # Scale for ks
+  scaled_temp <- scale_for_ks(spp = "WC", 
+                              file = paste0("WC-DDT-", 
+                                            gsub("noscale", "notscaled", name),
+                                            "_dist-estimates.csv"), 
+                  data = scaled)
+  
+  
+  # Save for later
+  assign(name, scaled_temp)
+  } 
+
+  
+  if(median(dataset) == 0) { 
+  
+  # Create Plot
+  create_plots(data = dataset, type = "without behavioral data", contam = "DDT", 
+             color = "dodgerblue4", path = "../../figures/white-croaker/", 
+             file = paste0(name, "_ddt_no-behavioral_meadian0"))
+  } 
+
+  
+  # Second run will be with behavioral data
+  name <- colsplit(file, "_", c("","","","",""))[,3]
+  name <- paste(colsplit(name, "states-", c(""))[,2])
+  name <- paste0(name, "-scale")
+  
+  dataset <- dat$total_behavioral_tox
+  
+  if(median(dataset) != 0) { 
+  # Scale to median
+  
+  scaled <- dataset/median(dataset)
+  
+  # Create Plot
+  create_plots(data = scaled, type = "with behavioral data", contam = "DDT", 
+             color = "dodgerblue4", path = "../../figures/white-croaker/", 
+             file = paste0(name, "_ddt_behavioral"))
+  
+  # Scale for KS test
+  
+  scaled_temp <- scale_for_ks(spp = "WC", 
+                              file = paste0("WC-DDT-", 
+                                            gsub("scale", "scaled", name),
+                                            "_dist-estimates.csv"), 
+                  data = scaled)
+  
+  # Save for later
+  assign(name, scaled_temp)
+  
+  } 
+
+  if(median(dataset) == 0) { 
+  # Create Plot
+  create_plots(data = dataset, type = "with behavioral data", contam = "DDT", 
+             color = "dodgerblue4", path = "../../figures/white-croaker/", 
+             file = paste0(name, "_ddt_behavioral_median0"))
+  } 
+  
+}
+```
+
+## Run the KS tests
+```{r} 
+# With Zeros included for comparison
+
+# Muscle vs all model runs
+ks.test(ddt_tissue, `1mpermin-2min-noscale`)
+ks.test(ddt_tissue, `1mpermin-5min-noscale`)
+ks.test(ddt_tissue, `3mpermin-2min-noscale`)
+ks.test(ddt_tissue, `3mpermin-5min-noscale`)
+ks.test(ddt_tissue, `1mpermin-2min-scale`)
+ks.test(ddt_tissue, `1mpermin-5min-scale`)
+ks.test(ddt_tissue, `3mpermin-2min-scale`)
+ks.test(ddt_tissue, `3mpermin-5min-scale`)
+```
