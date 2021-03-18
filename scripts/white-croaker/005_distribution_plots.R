@@ -2,15 +2,13 @@
 
 library(fitdistrplus)
 library(tidyverse)
-library(readxl)
 
 source("scripts/functions/func-dist_finder.R")
 
 # Contaminant Data
-collect<-read_xlsx("data/true-contaminants/white_croaker_contaminants.xlsx")
+collect<-read.csv("data/true-contaminants/white_croaker_contaminants.csv")
 collect<-collect %>% 
-  filter(Spcode == "WC" & region == "PV")
-colnames(collect)[11:12] <- c("DDT","PCB")
+  rename(DDT = Analysis.Result)
 
 ## DDT
 ### Tissue
