@@ -22,10 +22,9 @@ source("../functions/comparing-functions.R")
 # Load Contaminant Data
 ```{r}
 # Contaminant Data
-collect<-read_xlsx("../../data/true-contaminants/white_croaker_contaminants.xlsx")
+collect<-read.csv("data/true-contaminants/white_croaker_contaminants.csv")
 collect<-collect %>% 
-  filter(Spcode == "WC" & region == "PV")
-colnames(collect)[11:12] <- c("DDT","PCB")
+  rename(DDT = Analysis.Result)
 ```
 
 # DDT 

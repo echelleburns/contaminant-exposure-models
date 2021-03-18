@@ -11,7 +11,7 @@ pcb<-readOGR("data/shapefiles/total_pcb_ocsd.shp")
 tox.list<-list(pcb, ddt)
 names(tox.list)<-c("pcb","ddt")
 
-list<-list.files("data/behaviors/", pattern="VR")
+list<-list.files("data/behaviors/", pattern="HT")
 
 for (g in list) { 
   all.dat<-read.csv(paste0("data/behaviors/",g))
@@ -53,7 +53,7 @@ for (g in list) {
 } 
 
   
-list<-list.files('data/CEMs', pattern='raw_VR')
+list<-list.files('data/CEMs', pattern='raw_HT')
 
 for( h in list) { 
   name <- colsplit(h, "[.]", c("",""))[,1]
@@ -65,7 +65,7 @@ for( h in list) {
   colnames(scaling)<-"state"
   scaling$scaler<-c(0, 0.5, 1)
 
-  this_contam<-colsplit(h, "_", c('','','',''))[,5]
+  this_contam<-colsplit(h, "_", c('','','','',''))[,5]
   this_contam<-colsplit(this_contam, '[.]', c('',''))[,1]
   this_contam<-toupper(paste(this_contam))
 
@@ -78,25 +78,25 @@ for( h in list) {
     temp<-dat[which(dat$ID == i),]
     temp$date<-as.Date(temp$DATETIME)
     timediff<-as.numeric(max(temp$date, na.rm=T)-min(temp$date, na.rm=T))/365
-    
+  
     temp<-merge(temp, scaling, "state")
     temp$level<-temp$tox*temp$scaler
     sum1<-sum(temp$tox)
     sum2<-sum(temp$level)
     if(timediff >= 1) {
-      scaled_year<-sum(temp$tox)/timediff
-      scaled_moveyear<-sum(temp$level)/timediff
+    scaled_year<-sum(temp$tox)/timediff
+    scaled_moveyear<-sum(temp$level)/timediff
     } else {
-      scaled_year <- sum1
-      scaled_moveyear <- sum2
+    scaled_year <- sum1
+    scaled_moveyear <- sum2
     }
-    
+  
     totals.temp<-cbind(paste(temp$ID[1]), paste(sum1), paste(sum2), paste(scaled_year), paste(scaled_moveyear))
     totals<-rbind(totals, totals.temp)
   }
-  
+
   totals<-as.data.frame(totals)
   colnames(totals)<-c("ID", "total_tox", "total_behavioral_tox", "tox_peryear_noscaler", "tox_peryear_scaled")
-  
+
   write.csv(totals, paste0("data/CEMs/scaled", name, ".csv"), row.names=F)
 }

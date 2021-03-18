@@ -1,5 +1,5 @@
 ---
-title: "Plots and Stats - HT"
+title: "Plots and Stats - VR"
 output: html_notebook
 ---
 
@@ -9,22 +9,20 @@ Step 1: Scale to the median
 Step 2: Fit to zscore of best fitting distribution
 Step 3: Compare using ks test
 
+
 ```{r}
 # Libraries
 library(tidyverse)
 library(reshape)
 library(limma)
 
-source("../comparing-functions.R")
+source("../functions/comparing-functions.R")
 ```
 
 # Load Contaminant Data
 ```{r}
 # Contaminant Data
-collect<-read.csv("../../data/true_contam/TrawlBioAccum-summary.csv")
-collect<-collect[which(collect$X.SCIENTIFIC.NAME == 'Pleuronichthys verticalis' & 
-                         collect$SAMPLING.POINT == "T1"),]
-colnames(collect)[14:15] <- c("DDT","PCB")
+collect<-read.csv("../../data/true-contaminants/vermilion_rockfish_contaminants.csv")
 ```
 
 # DDT 
@@ -32,7 +30,7 @@ colnames(collect)[14:15] <- c("DDT","PCB")
 ```{r}
 # Tissue
 filtered <- collect %>%
-  filter(TISSUE == "TISSUE" & !is.na(DDT)) 
+  filter(!is.na(DDT)) 
 
 dataset <- filtered$DDT
 
@@ -43,12 +41,12 @@ scaled <- dataset/median(dataset)
 
 # Create Plot
 create_plots(data = scaled, type = "in Muscle Tissue", contam = "DDT", 
-             color = "darkslategray", path = "../../figures/HT/raw_figures/", 
+             color = "darkslategray", path = "../../figures/vermilion-rockfish/", 
              file = "ddt_muscle")
 
 # scale for ks test
 
-ddt_tissue <- scale_for_ks(spp = "HT", file = "HT-tissueDDT_CDE-estimates.csv", 
+ddt_tissue <- scale_for_ks(spp = "VR", file = "VR-DDT_dist-estimates.csv", 
                   data = scaled)
 } 
 
@@ -56,49 +54,17 @@ if(median(dataset) == 0) {
 
 # Create Plot
 create_plots(data = dataset, type = "in Muscle Tissue", contam = "DDT", 
-             color = "darkslategray", path = "../../figures/HT/raw_figures/", 
+             color = "darkslategray", path = "../../figures/vermilion-rockfish/", 
              file = "ddt_muscle_median0")
 }
 
 ```
 
-## OCSD Data - Liver
-```{r}
-filtered <- collect %>%
-  filter(TISSUE == "LIVER" & !is.na(DDT)) 
-
-dataset <- filtered$DDT
-
-if(median(dataset) != 0) { 
-
-# Scale to median
-scaled <- dataset/median(dataset)
-
-# Create Plot
-create_plots(data = scaled, type = "in Liver Tissue", contam = "DDT", 
-             color = "darkslategray", path = "../../figures/HT/raw_figures/", 
-             file = "ddt_liver")
-
-# scale for ks test
-
-ddt_liver <- scale_for_ks(spp = "HT", file = "HT-liverDDT_CDE-estimates.csv", 
-                  data = scaled)
-} 
-
-if(median(dataset) == 0) { 
-
-# Create Plot
-create_plots(data = dataset, type = "in Liver Tissue", contam = "DDT", 
-             color = "darkslategray", path = "../../figures/HT/raw_figures/", 
-             file = "ddt_liver_median0")
-} 
-```
-
 ## CEM Generated Files
 ```{r}
-# List of relevant files for DDT and HT
+# List of relevant files for DDT and VR
 list_files <- list.files('../../data/CEMs/', pattern='ddt')
-list_files <- list_files[grepl('scaled_HT', list_files)]
+list_files <- list_files[grepl('scaled_VR', list_files)]
 
 for( file in list_files ) { 
   dat <- read.csv(paste0('../../data/CEMS/', file))
@@ -118,14 +84,14 @@ for( file in list_files ) {
   
   # Create Plot
   create_plots(data = scaled, type = "without behavioral data", contam = "DDT", 
-             color = "dodgerblue4", path = "../../figures/HT/raw_figures/", 
+             color = "dodgerblue4", path = "../../figures/vermilion-rockfish/", 
              file = paste0(name, "_ddt_no-behavioral"))
   
   # Scale for ks
-  scaled_temp <- scale_for_ks(spp = "HT", 
-                              file = paste0("HT-DDT-", 
+  scaled_temp <- scale_for_ks(spp = "VR", 
+                              file = paste0("VR-DDT-", 
                                             gsub("noscale", "notscaled", name),
-                                            "_CDE-estimates.csv"), 
+                                            "_dist-estimates.csv"), 
                   data = scaled)
   
   
@@ -138,7 +104,7 @@ for( file in list_files ) {
   
   # Create Plot
   create_plots(data = dataset, type = "without behavioral data", contam = "DDT", 
-             color = "dodgerblue4", path = "../../figures/HT/raw_figures/", 
+             color = "dodgerblue4", path = "../../figures/vermilion-rockfish/", 
              file = paste0(name, "_ddt_no-behavioral_meadian0"))
   } 
 
@@ -157,15 +123,15 @@ for( file in list_files ) {
   
   # Create Plot
   create_plots(data = scaled, type = "with behavioral data", contam = "DDT", 
-             color = "dodgerblue4", path = "../../figures/HT/raw_figures/", 
+             color = "dodgerblue4", path = "../../figures/vermilion-rockfish/", 
              file = paste0(name, "_ddt_behavioral"))
   
   # Scale for KS test
   
-  scaled_temp <- scale_for_ks(spp = "HT", 
-                              file = paste0("HT-DDT-", 
+  scaled_temp <- scale_for_ks(spp = "VR", 
+                              file = paste0("VR-DDT-", 
                                             gsub("scale", "scaled", name),
-                                            "_CDE-estimates.csv"), 
+                                            "_dist-estimates.csv"), 
                   data = scaled)
   
   # Save for later
@@ -176,19 +142,17 @@ for( file in list_files ) {
   if(median(dataset) == 0) { 
   # Create Plot
   create_plots(data = dataset, type = "with behavioral data", contam = "DDT", 
-             color = "dodgerblue4", path = "../../figures/HT/raw_figures/", 
+             color = "dodgerblue4", path = "../../figures/vermilion-rockfish/", 
              file = paste0(name, "_ddt_behavioral_median0"))
   } 
   
 }
 ```
 
+
 ## Run the KS tests
 ```{r} 
 # With Zeros included for comparison
-
-# Muscle vs Liver
-ks.test(ddt_tissue, ddt_liver)
 
 # Muscle vs all model runs
 ks.test(ddt_tissue, `1mpermin-2min-noscale`)
@@ -199,16 +163,6 @@ ks.test(ddt_tissue, `1mpermin-2min-scale`)
 ks.test(ddt_tissue, `1mpermin-5min-scale`)
 ks.test(ddt_tissue, `3mpermin-2min-scale`)
 ks.test(ddt_tissue, `3mpermin-5min-scale`)
-
-# Liver vs all model runs
-ks.test(ddt_liver, `1mpermin-2min-noscale`)
-ks.test(ddt_liver, `1mpermin-5min-noscale`)
-ks.test(ddt_liver, `3mpermin-2min-noscale`)
-ks.test(ddt_liver, `3mpermin-5min-noscale`)
-ks.test(ddt_liver, `1mpermin-2min-scale`)
-ks.test(ddt_liver, `1mpermin-5min-scale`)
-ks.test(ddt_liver, `3mpermin-2min-scale`)
-ks.test(ddt_liver, `3mpermin-5min-scale`)
 ```
 
 # PCB
@@ -216,7 +170,7 @@ ks.test(ddt_liver, `3mpermin-5min-scale`)
 ```{r}
 # Tissue
 filtered <- collect %>%
-  filter(TISSUE == "TISSUE" & !is.na(PCB)) 
+  filter(!is.na(PCB)) 
 
 dataset <- filtered$PCB
 
@@ -227,12 +181,12 @@ scaled <- dataset/median(dataset)
 
 # Create Plot
 create_plots(data = scaled, type = "in Muscle Tissue", contam = "PCB", 
-             color = "darkslategray", path = "../../figures/HT/raw_figures/", 
+             color = "darkslategray", path = "../../figures/vermilion-rockfish/", 
              file = "pcb_muscle")
 
 # scale for ks test
 
-pcb_muscle <- scale_for_ks(spp = "HT", file = "HT-tissuePCB_CDE-estimates.csv", 
+pcb_muscle <- scale_for_ks(spp = "VR", file = "VR-PCB_dist-estimates.csv", 
                   data = scaled)
 } 
 
@@ -240,48 +194,16 @@ if(median(dataset) == 0) {
 
 # Create Plot
 create_plots(data = dataset, type = "in Muscle Tissue", contam = "PCB", 
-             color = "darkslategray", path = "../../figures/HT/raw_figures/", 
+             color = "darkslategray", path = "../../figures/vermilion-rockfish/", 
              file = "pcb_muscle_median0")
-}
-```
-
-## OCSD Data - Liver
-```{r}
-filtered <- collect %>%
-  filter(TISSUE == "LIVER" & !is.na(PCB)) 
-
-dataset <- filtered$PCB
-
-if(median(dataset) != 0) { 
-
-# Scale to median
-scaled <- dataset/median(dataset)
-
-# Create Plot
-create_plots(data = scaled, type = "in Liver Tissue", contam = "PCB", 
-             color = "darkslategray", path = "../../figures/HT/raw_figures/", 
-             file = "pcb_liver")
-
-# scale for ks test
-
-pcb_liver <- scale_for_ks(spp = "HT", file = "HT-liverPCB_CDE-estimates.csv", 
-                  data = scaled)
-} 
-
-if(median(dataset) == 0) { 
-
-# Create Plot
-create_plots(data = dataset, type = "in Liver Tissue", contam = "PCB", 
-             color = "darkslategray", path = "../../figures/HT/raw_figures/", 
-             file = "pcb_liver_median0")
 }
 ```
 
 ## CEM Generated Files
 ```{r}
-# List of relevant files for PCB and HT
+# List of relevant files for PCB and VR
 list_files <- list.files('../../data/CEMs/', pattern='pcb')
-list_files <- list_files[grepl('scaled_HT', list_files)]
+list_files <- list_files[grepl('scaled_VR', list_files)]
 
 for( file in list_files ) { 
   dat <- read.csv(paste0('../../data/CEMS/', file))
@@ -301,14 +223,14 @@ for( file in list_files ) {
   
   # Create Plot
   create_plots(data = scaled, type = "without behavioral data", contam = "PCB", 
-             color = "dodgerblue4", path = "../../figures/HT/raw_figures/", 
+             color = "dodgerblue4", path = "../../figures/vermilion-rockfish/", 
              file = paste0(name, "_pcb_no-behavioral"))
   
   # Scale for ks
-  scaled_temp <- scale_for_ks(spp = "HT", 
-                              file = paste0("HT-PCB-", 
+  scaled_temp <- scale_for_ks(spp = "VR", 
+                              file = paste0("VR-PCB-", 
                                             gsub("noscale", "notscaled", name),
-                                            "_CDE-estimates.csv"), 
+                                            "_dist-estimates.csv"), 
                   data = scaled)
   
   
@@ -321,7 +243,7 @@ for( file in list_files ) {
   
   # Create Plot
   create_plots(data = dataset, type = "without behavioral data", contam = "PCB", 
-             color = "dodgerblue4", path = "../../figures/HT/raw_figures/", 
+             color = "dodgerblue4", path = "../../figures/vermilion-rockfish/", 
              file = paste0(name, "_pcb_no-behavioral_meadian0"))
   } 
 
@@ -340,15 +262,15 @@ for( file in list_files ) {
   
   # Create Plot
   create_plots(data = scaled, type = "with behavioral data", contam = "PCB", 
-             color = "dodgerblue4", path = "../../figures/HT/raw_figures/", 
+             color = "dodgerblue4", path = "../../figures/vermilion-rockfish/", 
              file = paste0(name, "_pcb_behavioral"))
   
   # Scale for KS test
   
-  scaled_temp <- scale_for_ks(spp = "HT", 
-                              file = paste0("HT-PCB-", 
+  scaled_temp <- scale_for_ks(spp = "VR", 
+                              file = paste0("VR-PCB-", 
                                             gsub("scale", "scaled", name),
-                                            "_CDE-estimates.csv"), 
+                                            "_dist-estimates.csv"), 
                   data = scaled)
   
   # Save for later
@@ -359,7 +281,7 @@ for( file in list_files ) {
   if(median(dataset) == 0) { 
   # Create Plot
   create_plots(data = dataset, type = "with behavioral data", contam = "PCB", 
-             color = "dodgerblue4", path = "../../figures/HT/raw_figures/", 
+             color = "dodgerblue4", path = "../../figures/vermilion-rockfish/", 
              file = paste0(name, "_pcb_behavioral_median0"))
   } 
   
@@ -371,14 +293,14 @@ for( file in list_files ) {
 ```{r} 
 # With Zeros included for comparison
 
-# Liver vs all model runs
-# ks.test(pcb_liver, `1mpermin-2min-noscale`)
-# ks.test(pcb_liver, `1mpermin-5min-noscale`)
-# ks.test(pcb_liver, `3mpermin-2min-noscale`)
-# ks.test(pcb_liver, `3mpermin-5min-noscale`)
-# ks.test(pcb_liver, `1mpermin-2min-scale`)
-# ks.test(pcb_liver, `1mpermin-5min-scale`)
-# ks.test(pcb_liver, `3mpermin-2min-scale`)
-# ks.test(pcb_liver, `3mpermin-5min-scale`)
+# Tissue vs all model runs
+# ks.test(pcb_tissue, `1mpermin-2min-noscale`)
+# ks.test(pcb_tissue, `1mpermin-5min-noscale`)
+# ks.test(pcb_tissue, `3mpermin-2min-noscale`)
+# ks.test(pcb_tissue, `3mpermin-5min-noscale`)
+# ks.test(pcb_tissue, `1mpermin-2min-scale`)
+# ks.test(pcb_tissue, `1mpermin-5min-scale`)
+# ks.test(pcb_tissue, `3mpermin-2min-scale`)
+# ks.test(pcb_tissue, `3mpermin-5min-scale`)
 ```
 

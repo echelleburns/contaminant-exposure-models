@@ -11,7 +11,7 @@ library(fields)
 
 options(digits=20) # so that we don't lose any resolution
 
-dat<-read.csv("data/all_detections/all_HT.csv")
+dat<-read.csv("data/all-detections/hornyhead_turbot_detections.csv")
 
 # Establish places to save data
 fivemin<-NULL
@@ -44,7 +44,7 @@ for( i in unique(dat$DETECTEDID)) {
     errmod_test <- list() # the run information
     
     # Run through 6 models per individual, saving outputs to plots
-    png(paste0("data/figures/pred/HT/",id,".png")) # create empty plot
+    png(paste0("figures/hornyhead-turbot/crawl_",id,".png")) # create empty plot
     plot(df$X, df$Y) # plot x/y coordinates
     
     for(val in 1:6){ # for each of 6 runs...
@@ -150,7 +150,7 @@ for( i in redo_list) {
     errmod_test <- list() # the run information
     
     # Run through 6 models per individual, saving outputs to plots
-    png(paste0("data/figures/pred/HT/",id,".png")) # create empty plot
+    png(paste0("figures/hornyhead-turbot/crawl_",id,".png")) # create empty plot
     plot(df$X, df$Y) # plot x/y coordinates
     
     for(val in 1:6){ # for each of 6 runs...
