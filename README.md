@@ -7,6 +7,8 @@ This repository is citable at Zenodo
 
 Raw and final datasets have been uploaded to Dryad.
 
+[![DOI](https://zenodo.org/badge/DOI/10.25349/D97314.svg)](https://doi.org/10.25349/D97314)
+
 **Note**: WC = white croaker; HT = hornyhead turbot; VR = vermilion rockfish
 
 # Folder Schema
