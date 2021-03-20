@@ -1,9 +1,11 @@
 # Description
 This repository contains the code used in the paper that is currently under review: Using acoustic telemetry to quantify potential contaminant exposure of Vermilion Rockfish (Sebastes miniatus), Hornyhead Turbot (Pleuronichthys verticalis), and White Croaker (Genyonemus lineatus) at wastewater outfalls in southern California 
 
-Raw and final datasets have been uploaded to Dryad.
+This repository is citable at Zenodo
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4625049.svg)](https://doi.org/10.5281/zenodo.4625049)
+
+Raw and final datasets have been uploaded to Dryad.
 
 **Note**: WC = white croaker; HT = hornyhead turbot; VR = vermilion rockfish
 
